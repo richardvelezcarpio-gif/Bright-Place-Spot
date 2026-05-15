@@ -1,7 +1,9 @@
 import json
 import os
-from datetime import datetime
-from datetime import time
+
+from datetime import datetime, time
+
+from openai import OpenAI
 
 from telegram import (
     Update,
@@ -18,25 +20,49 @@ from telegram.ext import (
     filters
 )
 
-# =========================
-# TOKEN BOT
-# =========================
-TOKEN = "8917175568:AAEbqkKH1Arrtc3JB9dC3iAWGEVGS0IU4ig"
+# IMPORTS LOCALES
+from openai_service import generar_respuesta
 
-# =========================
+from responses import (
+    get_response,
+    detectar_objetivo,
+    detectar_producto
+)
+
+from user_service import (
+    load_users,
+    save_users,
+    get_user_profile
+)
+from reminders import configurar_recordatorios
+# =====================================
+# TOKENS
+# =====================================
+
+from dotenv import load_dotenv
+load_dotenv()
+
+TOKEN = os.getenv("BOT_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+# =====================================
 # ESTADOS
-# =========================
+# =====================================
+
 NOMBRE, META = range(2)
 
-# =========================
-# ARCHIVO JSON
-# =========================
+# =====================================
+# ARCHIVO
+# =====================================
+
 ARCHIVO_USUARIOS = "usuarios.json"
 
-
-# =========================
+# =====================================
 # CARGAR USUARIOS
-# =========================
+# =====================================
+
 def cargar_usuarios():
 
     if os.path.exists(ARCHIVO_USUARIOS):
@@ -47,26 +73,117 @@ def cargar_usuarios():
 
     return {}
 
-
-# =========================
+# =====================================
 # GUARDAR USUARIOS
-# =========================
+# =====================================
+
 def guardar_usuarios(data):
 
     with open(ARCHIVO_USUARIOS, "w") as archivo:
 
         json.dump(data, archivo, indent=4)
 
+# =====================================
+# BASE DATOS
+# =====================================
 
-# =========================
-# BASE DE DATOS
-# =========================
 usuarios = cargar_usuarios()
 
+# =========================================
+# IA FITCLUB HÍBRIDA
+# =========================================
 
-# =========================
+async def responder_ia(user_id, mensaje_usuario):
+
+    usuarios = cargar_usuarios()
+
+    user_id = str(user_id)
+
+    nombre = usuarios.get(user_id, {}).get("nombre", "")
+    meta = usuarios.get(user_id, {}).get("meta", "")
+    historial = usuarios.get(user_id, {}).get("historial", [])
+
+    historial.append({
+        "role": "user",
+        "content": mensaje_usuario
+    })
+
+    historial = historial[-6:]
+
+    mensajes = [
+
+        {
+            "role": "system",
+            "content": f"""
+
+Eres un coach  bright Place Spot.
+
+El cliente se llama: {nombre}
+
+Su meta principal es:
+{meta}
+
+Ayudas personas a:
+- bajar peso
+- ganar músculo
+- ganar energía
+- mejorar bienestar
+- mejorar nutrición
+
+Tu enfoque está basado en:
+- nutrición saludable
+- batidos
+- motivación
+- ejercicio
+- bienestar
+- productos Herbalife
+
+Recomiendas productos Herbalife según la meta del cliente.
+
+Hablas:
+- positivo
+- energético
+- amigable
+- motivador
+- profesional
+
+Nunca das diagnósticos médicos.
+Nunca reemplazas médicos.
+Nunca recomiendas medicamentos.
+"""
+        },
+
+        {
+            "role": "user",
+            "content": mensaje_usuario
+        }
+
+    ]
+
+    respuesta = generar_respuesta(
+    mensajes,
+    historial,
+    usuarios,
+    user_id,
+    save_users
+)
+    nombre = usuarios.get(user_id, {}).get("nombre", "")
+
+    respuesta_final = f"""
+💚 {nombre}
+
+{respuesta}
+
+— Coach Alexandra
+"""
+
+    return respuesta_final
+    
+    
+# =====================================
 # RECORDATORIO AUTOMÁTICO
-# =========================
+# =====================================
+
 async def recordatorio(context: ContextTypes.DEFAULT_TYPE):
 
     usuarios = cargar_usuarios()
@@ -78,7 +195,7 @@ async def recordatorio(context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(
                 chat_id=user_id,
                 text="""
-🌱 RECUERDO DEL DÍA
+🌱 RECORDATORIO DEL DÍA
 
 Tu salud es una inversión diaria 💚
 
@@ -90,7 +207,10 @@ Tu salud es una inversión diaria 💚
 
             print(f"Error enviando mensaje a {user_id}: {e}")
 
-  # CLIENTES INACTIVOS
+# =====================================
+# CLIENTES INACTIVOS
+# =====================================
+
 async def revisar_inactivos(context: ContextTypes.DEFAULT_TYPE):
 
     usuarios = cargar_usuarios()
@@ -117,7 +237,7 @@ async def revisar_inactivos(context: ContextTypes.DEFAULT_TYPE):
                     await context.bot.send_message(
                         chat_id=user_id,
                         text=f"""
-💚 Hace {dias} días que no vienes a FitClub Nutrition.
+💚 Hace {dias} días que no vienes a Bright Place Spot.
 
 Tu cuerpo merece seguir avanzando 🌱
 
@@ -127,22 +247,24 @@ Tu cuerpo merece seguir avanzando 🌱
 
                 except Exception as e:
 
-                    print(e)          
-# =========================
+                    print(e)
+
+# =====================================
 # START
-# =========================
+# =====================================
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
-        "🌱 Bienvenido a FitClub Nutrition\n\n¿Cómo te llamas?"
+        "🌱 Bienvenido a Bright Place Spot\n\n¿Cómo te llamas?"
     )
 
     return NOMBRE
 
-
-# =========================
+# =====================================
 # GUARDAR NOMBRE
-# =========================
+# =====================================
+
 async def guardar_nombre(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     nombre = update.message.text
@@ -153,7 +275,7 @@ async def guardar_nombre(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ["🔥 Bajar peso"],
         ["💪 Ganar músculo"],
         ["⚡ Más energía"],
-        ["❤️ Bienestar"]
+        ["💚 Bienestar"]
     ]
 
     reply_markup = ReplyKeyboardMarkup(
@@ -169,33 +291,54 @@ async def guardar_nombre(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return META
 
-
-# =========================
+# =====================================
 # GUARDAR META
-# =========================
+# =====================================
+
 async def guardar_meta(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     meta = update.message.text
+
     nombre = context.user_data["nombre"]
 
     user_id = str(update.message.from_user.id)
+
+    perfil = get_user_profile(usuarios, user_id)
+
+    objetivo = detectar_objetivo(meta)
+
+    if objetivo:
+
+        perfil["objetivo"] = objetivo
+
+    productos = detectar_producto(meta)
+
+    for producto in productos:
+
+        if producto not in perfil["productos"]:
+
+            perfil["productos"].append(producto)
 
     usuarios[user_id] = {
         "nombre": nombre,
         "meta": meta,
         "puntos": 0,
         "visitas": 0,
-"ultima_visita": ""
+        "ultima_visita": "",
+        "historial": [],
+        "objetivo": perfil.get("objetivo", ""),
+        "productos": perfil.get("productos", [])
     }
 
-    guardar_usuarios(usuarios)
+    save_users(usuarios)
 
     keyboard = [
-        ["🥤 Menú", "🎯 Mi progreso"],
-        ["✅ Registrar visita", "🏆 Mis puntos"],
-        ["💧 Recordatorios", "📍 Horarios"],
-        ["🤝 Negocio Herbalife", "👤 Mi cuenta"]
-    ]
+    ["🥤 Menú", "📈 Mi progreso"],
+    ["✅ Registrar visita", "🏆 Mis puntos"],
+    ["⏰ Recordatorios", "🕒 Horarios"],
+    ["🤝 Negocio Herbalife", "👤 Mi cuenta"],
+    ["📍 Dirección Club", "📞 Contacto Coach"]
+]
 
     reply_markup = ReplyKeyboardMarkup(
         keyboard,
@@ -209,31 +352,49 @@ async def guardar_meta(update: Update, context: ContextTypes.DEFAULT_TYPE):
 👤 Nombre: {nombre}
 🎯 Meta: {meta}
 
-Bienvenido a FitClub Nutrition 🌱
+Bienvenido a BrightPlace Spot
+Cuentame cual es tu objetivo 🚀
 """,
         reply_markup=reply_markup
     )
 
     return ConversationHandler.END
 
-
-# =========================
+# =====================================
 # RESPONDER BOTONES
-# =========================
+# =====================================
+
+
+# =========================================
+# RESPONDER BOTONES + IA
+# =========================================
+
 async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     texto = update.message.text
 
     user_id = str(update.message.from_user.id)
 
-    # =========================
+    # =========================================
+    # RESPUESTAS RÁPIDAS
+    # =========================================
+
+    respuesta_rapida = get_response(texto)
+
+    if respuesta_rapida != "Gracias por escribirnos 😊":
+
+        await update.message.reply_text(respuesta_rapida)
+        return
+
+    # =========================================
     # MENÚ
-    # =========================
+    # =========================================
+
     if texto == "🥤 Menú":
 
         await update.message.reply_text(
             """
-🥤 MENÚ FITCLUB
+🥤 MENÚ BRIGHT PLACE SPOT
 
 • Batido Energético
 • Batido Proteico
@@ -241,47 +402,100 @@ async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • Té Energizante
 """
         )
+        return
 
-    # =========================
+    # =========================================
     # HORARIOS
-    # =========================
-    elif texto == "📍 Horarios":
+    # =========================================
+
+    elif texto == "🕒 Horarios":
 
         await update.message.reply_text(
             """
-📍 HORARIOS
+🕒 HORARIOS
 
-Lunes a Viernes:
-7 AM - 7 PM
-
-Sábados:
-8 AM - 2 PM
+Lunes a Viernes
+7am - 2pm ☀️
 """
         )
+        return
+    
+    # HORARIOS
 
-    # =========================
-    # RECORDATORIOS
-    # =========================
-    elif texto == "💧 Recordatorios":
+        # =========================================
+    # DIRECCIÓN CLUB
+    # =========================================
+
+    elif texto == "📍 Dirección Club":
 
         await update.message.reply_text(
             """
-💧 Tus recordatorios diarios fueron activados 🌱
+📍 BRIGHT PLACE SPOT
+
+Tomillos L6 Y Las Retamas
+Cuenca - Ecuador
+
+✨ Te esperamos con la mejor energía.
 """
         )
 
-    # =========================
+        return
+
+    # =========================================
+    # CONTACTO COACH
+    # =========================================
+
+    elif texto == "📞 Contacto Coach":
+
+        await update.message.reply_text(
+    """
+📞 COACH ALEXANDRA
+
+💬 WhatsApp:
+https://wa.me/593983830383
+
+📸 Instagram:
+https://www.instagram.com/brightplacespot/
+
+💚 Estoy aquí para ayudarte.
+"""
+)
+
+        return
+
+    
+
+        # =========================================
     # REGISTRAR VISITA
-    # =========================
+    # =========================================
+
     elif texto == "✅ Registrar visita":
 
         if user_id in usuarios:
 
-            usuarios[user_id]["visitas"] += 1
-            usuarios[user_id]["ultima_visita"] = datetime.now().strftime("%Y-%m-%d")
-            usuarios[user_id]["puntos"] += 10
+            hoy = datetime.now().strftime("%Y-%m-%d")
 
-            guardar_usuarios(usuarios)
+            ultima_visita = usuarios[user_id].get("ultima_visita", "")
+
+            # EVITAR DOBLE VISITA EL MISMO DÍA
+            if ultima_visita == hoy:
+
+                await update.message.reply_text(
+                    """
+⚠️ Ya registraste tu visita hoy.
+
+💚 Te esperamos mañana nuevamente.
+"""
+                )
+
+                return
+
+            # REGISTRAR VISITA
+            usuarios[user_id]["visitas"] += 1
+            usuarios[user_id]["puntos"] += 10
+            usuarios[user_id]["ultima_visita"] = hoy
+
+            save_users(usuarios)
 
             puntos = usuarios[user_id]["puntos"]
             visitas = usuarios[user_id]["visitas"]
@@ -302,7 +516,7 @@ Sábados:
 
             elif puntos >= 50:
 
-                premio = "🧋 Té gratis desbloqueado"
+                premio = "🍵 Té gratis desbloqueado"
 
             await update.message.reply_text(
                 f"""
@@ -311,56 +525,43 @@ Sábados:
 🏆 Ganaste 10 puntos
 
 ⭐ Puntos actuales: {puntos}
-🥤 Visitas totales: {visitas}
+📍 Visitas totales: {visitas}
 
 🎁 Recompensa actual:
+
 {premio}
 
-Gracias por cuidar tu salud 🌱
+💚 Gracias por cuidar tu salud.
 """
             )
 
-    # =========================
+        return
+
+    # =========================================
     # MIS PUNTOS
-    # =========================
+    # =========================================
+
     elif texto == "🏆 Mis puntos":
 
         if user_id in usuarios:
 
             puntos = usuarios[user_id]["puntos"]
-            visitas = usuarios[user_id]["visitas"]
 
             await update.message.reply_text(
                 f"""
-🏆 SISTEMA DE PUNTOS
+🏆 MIS PUNTOS
 
-⭐ Puntos acumulados: {puntos}
-
-🥤 Visitas registradas: {visitas}
-
-🎁 Premio disponible cada 100 puntos.
-
-Sigue avanzando 💚
+⭐ Tienes actualmente:
+{puntos} puntos
 """
             )
 
-    # =========================
-    # MI PROGRESO
-    # =========================
-    elif texto == "🎯 Mi progreso":
+        return
 
-        await update.message.reply_text(
-            """
-🎯 Muy pronto podrás registrar:
-• peso
-• metas
-• resultados
-"""
-        )
-
-    # =========================
+    # =========================================
     # MI CUENTA
-    # =========================
+    # =========================================
+
     elif texto == "👤 Mi cuenta":
 
         if user_id in usuarios:
@@ -369,49 +570,54 @@ Sigue avanzando 💚
 
             await update.message.reply_text(
                 f"""
-👤 PERFIL
+👤 MI CUENTA
 
-Nombre: {usuario['nombre']}
-Meta: {usuario['meta']}
-Estado: Activo 🌱
+Nombre: {usuario.get("nombre", "")}
+
+Meta: {usuario.get("meta", "")}
+
+⭐ Puntos: {usuario.get("puntos", 0)}
+
+✅ Visitas: {usuario.get("visitas", 0)}
 """
             )
 
-    # =========================
-    # NEGOCIO HERBALIFE
-    # =========================
-    elif texto == "🤝 Negocio Herbalife":
+        return
 
-        await update.message.reply_text(
-            """
-🔥 Construye ingresos ayudando personas a mejorar su salud 💚
-"""
-        )
+    # =========================================
+    # IA
+    # =========================================
 
+    respuesta_ia = await responder_ia(user_id, texto)
 
-# =========================
+    await update.message.reply_text(respuesta_ia)
+
+# =====================================
 # CANCELAR
-# =========================
+# =====================================
+
 async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
-        "Proceso cancelado",
+        "Proceso cancelado.",
         reply_markup=ReplyKeyboardRemove()
     )
 
     return ConversationHandler.END
 
-
-# =========================
+# =====================================
 # APP
-# =========================
+# =====================================
+
 app = ApplicationBuilder().token(TOKEN).build()
+configurar_recordatorios(app, usuarios)
 
-
-# =========================
+# =====================================
 # CONVERSACIÓN
-# =========================
+# =====================================
+
 conv_handler = ConversationHandler(
+
     entry_points=[CommandHandler("start", start)],
 
     states={
@@ -434,9 +640,10 @@ conv_handler = ConversationHandler(
     fallbacks=[CommandHandler("cancel", cancelar)]
 )
 
-# =========================
+# =====================================
 # HANDLERS
-# =========================
+# =====================================
+
 app.add_handler(conv_handler)
 
 app.add_handler(
@@ -446,9 +653,10 @@ app.add_handler(
     )
 )
 
-# =========================
-# RECORDATORIO DIARIO
-# =========================
+# =====================================
+# RECORDATORIOS
+# =====================================
+
 job_queue = app.job_queue
 
 job_queue.run_daily(
@@ -463,7 +671,8 @@ job_queue.run_daily(
 
 print("🚀 BOT ENCENDIDO...")
 
-# =========================
+# =====================================
 # RUN
-# =========================
+# =====================================
+
 app.run_polling()

@@ -1,9 +1,8 @@
 import json
 import os
-
 from datetime import datetime, time
 
-from openai import OpenAI
+import openai
 
 from telegram import (
     Update,
@@ -45,7 +44,7 @@ load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+openai.api_key = OPENAI_API_KEY
 
 # =====================================
 # ESTADOS

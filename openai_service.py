@@ -1,7 +1,7 @@
-from openai import OpenAI
-from config import OPENAI_API_KEY
+import openai
+import os
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 def generar_respuesta(
@@ -12,7 +12,7 @@ def generar_respuesta(
     save_users
 ):
 
-    respuesta = client.chat.completions.create(
+    respuesta = openai.ChatCompletion.create(
         model="gpt-4o-mini",
         messages=mensajes + historial
     )

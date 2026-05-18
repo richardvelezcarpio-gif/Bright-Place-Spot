@@ -4,11 +4,10 @@ from datetime import datetime, timedelta
 
 from user_service import load_users
 
-<<<<<<< HEAD
-ADMIN_ID = "7816979989"
-=======
+
+
 ADMIN_ID = 0
->>>>>>> 10fde51dda9db15dc5b5914f0b8e757c10d8951c
+
 
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):

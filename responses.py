@@ -3,7 +3,7 @@ def get_response(message):
     text = message.lower()
 
     if "hola" in text:
-        return "Hola 😊 Bienvenido a nuestro club Herbalife."
+        return "Hola 😊 Bienvenido a Bright Place Spot."
 
     if "proteina" in text:
         return "Tenemos proteína Herbalife disponible 💪"

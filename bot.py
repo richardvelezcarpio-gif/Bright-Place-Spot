@@ -1,9 +1,32 @@
-import json
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import os
+import json
 from datetime import datetime, time
-
+from admin.clientes import clientes_command
 import openai
+from admin.stats import stats_command
+from admin.cliente import cliente_command
+from user_service import save_users
+from admin.broadcast import broadcast
+from admin.inactivos import broadcast_inactivos
+from admin.objetivos import broadcast_objetivo
+from admin.campanas_ai import crear_campana_inactivos
+from admin.reactivacion_ai import reactivar_inactivos
+from admin.top_clientes import top_clientes
+from services.campanas import ver_campanas
+from admin.puntos import dar_puntos
+from datetime import datetime
+from telegram import Update
+from telegram.ext import *
+from admin.order_command import *
 
+from user_service import (
+    load_users,
+    save_users
+)
 from telegram import (
     Update,
     ReplyKeyboardMarkup,
@@ -34,6 +57,13 @@ from user_service import (
     get_user_profile
 )
 from reminders import configurar_recordatorios
+
+
+# ====================================
+# CONFIGURACIÓN ADMIN
+# ====================================
+
+ADMIN_ID = 0
 # =====================================
 # TOKENS
 # =====================================
@@ -91,16 +121,55 @@ usuarios = cargar_usuarios()
 # =========================================
 # IA FITCLUB HÍBRIDA
 # =========================================
+from datetime import datetime
 
-async def responder_ia(user_id, mensaje_usuario):
+async def responder_ia(update, user_id, mensaje_usuario):
 
     usuarios = cargar_usuarios()
 
     user_id = str(user_id)
 
-    nombre = usuarios.get(user_id, {}).get("nombre", "")
-    meta = usuarios.get(user_id, {}).get("meta", "")
-    historial = usuarios.get(user_id, {}).get("historial", [])
+    # ==============================
+    # CREAR USUARIO SI NO EXISTE
+    # ==============================
+
+    if user_id not in usuarios:
+
+        usuarios[str(user_id)] = {
+            "nombre": update.effective_user.first_name,
+            "meta": "",
+            "historial": [],
+            "visitas": 0,
+            "ultima_actividad": "",
+            "productos": [],
+            "puntos": 0
+        }
+
+    # ==============================
+    # ACTUALIZAR CRM
+    # ==============================
+
+    # ACTUALIZAR CRM
+
+    usuarios[user_id]["nombre"] = update.effective_user.first_name
+
+    usuarios[user_id]["visitas"] += 1
+
+    usuarios[user_id]["ultima_actividad"] = str(datetime.now())
+
+    # ==============================
+    # OBTENER DATOS
+    # ==============================
+
+    nombre = usuarios[user_id].get("nombre", "amig@")
+
+    meta = usuarios[user_id].get("meta", "")
+
+    historial = usuarios[user_id].get("historial", [])
+
+    # ==============================
+    # GUARDAR MENSAJE USUARIO
+    # ==============================
 
     historial.append({
         "role": "user",
@@ -109,13 +178,21 @@ async def responder_ia(user_id, mensaje_usuario):
 
     historial = historial[-6:]
 
+    usuarios[user_id]["historial"] = historial
+
+    guardar_usuarios(usuarios)
+
+    # ==============================
+    # PROMPT IA
+    # ==============================
+
     mensajes = [
 
         {
             "role": "system",
             "content": f"""
 
-Eres un coach  bright Place Spot.
+Eres un coach bright Place Spot.
 
 El cliente se llama: {nombre}
 
@@ -123,17 +200,15 @@ Su meta principal es:
 {meta}
 
 Ayudas personas a:
-- bajar peso
 - ganar músculo
 - ganar energía
 - mejorar bienestar
-- mejorar nutrición
+- bajar nutrición
 
 Tu enfoque está basado en:
 - nutrición saludable
 - batidos
 - motivación
-- ejercicio
 - bienestar
 - productos Herbalife
 
@@ -143,12 +218,12 @@ Hablas:
 - positivo
 - energético
 - amigable
-- motivador
 - profesional
 
 Nunca das diagnósticos médicos.
 Nunca reemplazas médicos.
 Nunca recomiendas medicamentos.
+
 """
         },
 
@@ -159,31 +234,32 @@ Nunca recomiendas medicamentos.
 
     ]
 
+    # ==============================
+    # RESPUESTA IA
+    # ==============================
     respuesta = generar_respuesta(
     mensajes,
-    historial,
     usuarios,
     user_id,
     save_users
 )
-    nombre = usuarios.get(user_id, {}).get("nombre", "")
+  
 
     respuesta_final = f"""
-💚 {nombre}
-
-{respuesta}
+🤖  {respuesta}
 
 — Coach Alexandra
 """
 
     return respuesta_final
     
-    
 # =====================================
 # RECORDATORIO AUTOMÁTICO
 # =====================================
 
 async def recordatorio(context: ContextTypes.DEFAULT_TYPE):
+
+    print("🔥 RECORDATORIO EJECUTADO")
 
     usuarios = cargar_usuarios()
 
@@ -192,7 +268,7 @@ async def recordatorio(context: ContextTypes.DEFAULT_TYPE):
         try:
 
             await context.bot.send_message(
-                chat_id=user_id,
+                chat_id=int(user_id),
                 text="""
 🌱 RECORDATORIO DEL DÍA
 
@@ -202,9 +278,11 @@ Tu salud es una inversión diaria 💚
 """
             )
 
+            print(f"✅ Enviado a {user_id}")
+
         except Exception as e:
 
-            print(f"Error enviando mensaje a {user_id}: {e}")
+            print(f"❌ Error enviando mensaje a {user_id}: {e}")
 
 # =====================================
 # CLIENTES INACTIVOS
@@ -332,12 +410,13 @@ async def guardar_meta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_users(usuarios)
 
     keyboard = [
-    ["🥤 Menú", "📈 Mi progreso"],
+    ["🥤 Productos", "📈 Mi progreso"],
     ["✅ Registrar visita", "🏆 Mis puntos"],
     ["⏰ Recordatorios", "🕒 Horarios"],
     ["🤝 Negocio Herbalife", "👤 Mi cuenta"],
-    ["📍 Dirección Club", "📞 Contacto Coach"]
-]
+    ["📍 Dirección Club", "🛒 Hacer pedido"],
+    ["📞 Contacto Coach"],
+    ] 
 
     reply_markup = ReplyKeyboardMarkup(
         keyboard,
@@ -351,7 +430,7 @@ async def guardar_meta(update: Update, context: ContextTypes.DEFAULT_TYPE):
 👤 Nombre: {nombre}
 🎯 Meta: {meta}
 
-Bienvenido a BrightPlace Spot
+Bienvenido a Bright Place Spot
 Cuentame cual es tu objetivo 🚀
 """,
         reply_markup=reply_markup
@@ -372,6 +451,245 @@ async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     texto = update.message.text
 
+
+    # =====================================
+    # MENU PRODUCTOS
+    # =====================================
+
+    if texto == "🥤 Productos":
+
+        keyboard_productos = [
+        ["🥤 Formula 1"],
+        ["🫖 Herbal Tea"],
+        ["💪 Proteína"],
+        ["💊 Multivitamínico"],
+        ["⬅️ Volver al menú"]
+    ]
+
+        reply_markup = ReplyKeyboardMarkup(
+                keyboard_productos,
+                resize_keyboard=True
+            )
+
+        await update.message.reply_text(
+            "🥤 Selecciona un producto:",
+            reply_markup=reply_markup
+        )
+
+        return
+
+
+    # =====================================
+    # VOLVER AL MENU
+    # =====================================
+
+    if texto == "⬅️ Volver al menú":
+
+        keyboard = [
+            ["🥤 Productos", "📈 Mi progreso"],
+            ["✅ Registrar visita", "🏆 Mis puntos"],
+            ["⏰ Recordatorios", "🕒 Horarios"],
+            ["🤝 Negocio Herbalife", "🛒 Hacer pedido"],
+            ["👤 Mi cuenta"]
+        ]
+
+        reply_markup = ReplyKeyboardMarkup(
+            keyboard,
+            resize_keyboard=True
+        )
+
+        await update.message.reply_text(
+            "🏠 Menú principal",
+            reply_markup=reply_markup
+        )
+
+        return
+    
+    # =========================================
+    # FORMULA 1
+    # =========================================
+
+
+    elif texto == "🥤 Formula 1":
+
+        await update.message.reply_text(
+            """
+    🥤 FORMULA 1 SHAKE
+
+    El batido más popular de Herbalife 🌟
+
+    ✅ BENEFICIOS:
+    • Ayuda al control de peso
+    • Nutrición balanceada
+    • Energía para el día
+    • Rico en proteína y fibra
+    • Ayuda a reducir antojos
+
+    💪 IDEAL PARA:
+    • Bajar peso
+    • Mantenerte saludable
+    • Reemplazar comidas rápidas
+    • Personas ocupadas
+
+    🥄 SABORES DISPONIBLES:
+    • Chocolate 🍫
+    • Vainilla 🍦
+    • Fresa 🍓
+    • Cookies 🍪
+
+    ⏰ CÓMO TOMARLO:
+    1-2 veces al día
+
+    🥛 PREPARACIÓN:
+    • 2 cucharadas Formula 1
+    • 8oz de agua o leche
+    • Mezclar en shaker
+
+    🔥 TIP COACH ALEXANDRA:
+    Combínalo con proteína para mejores resultados.
+
+    ⭐ Producto estrella de Bright Place Spot
+    """
+        )
+
+        return
+    
+
+# =========================================
+    # HERBAL TEA
+    # =========================================
+
+
+
+    elif texto == "🍵 Herbal Tea":
+
+        await update.message.reply_text(
+            """
+    🍵 HERBAL TEA CONCENTRATE
+
+    Tu boost natural de energía ⚡
+
+    ✅ BENEFICIOS:
+    • Más energía
+    • Mayor enfoque mental
+    • Ayuda al metabolismo
+    • Menos cansancio
+    • Ayuda a quemar calorías
+
+    🔥 PERFECTO PARA:
+    • Antes de entrenar
+    • Empezar el día activo
+    • Combatir fatiga
+    • Trabajar con energía
+
+    ☀️ SABORES:
+    • Original
+    • Limón 🍋
+    • Durazno 🍑
+    • Frambuesa 🍓
+
+    ⏰ CÓMO TOMARLO:
+    1-2 veces al día
+
+    🥤 PREPARACIÓN:
+    • 1/2 cucharadita
+    • Agua caliente o fría
+
+    ⚡ TIP COACH ALEXANDRA:
+    Combínalo con Aloe Herbal para mejor digestión.
+
+    🚀 Energía limpia sin azúcar excesiva
+    """
+        )
+
+        return
+
+    # =========================================
+    # PROTEINA
+    # =========================================
+
+
+    elif texto == "💪 Proteína":
+
+        await update.message.reply_text(
+            """
+    💪 PROTEÍNA PERSONALIZADA
+
+    Recuperación y fuerza muscular 🔥
+
+    ✅ BENEFICIOS:
+    • Recuperación muscular
+    • Ganancia muscular
+    • Más saciedad
+    • Mantiene masa muscular
+    • Ayuda después del ejercicio
+
+    🏋️ IDEAL PARA:
+    • Ganar músculo
+    • Recuperación
+    • Deportistas
+    • Personas activas
+
+    🥛 CÓMO USARLA:
+    • En batidos
+    • Después de entrenar
+    • Entre comidas
+
+    ⏰ RECOMENDADO:
+    1-2 veces al día
+
+    🔥 TIP COACH ALEXANDRA:
+    Agrégala a tu Formula 1 para mayor proteína y nutrición.
+
+    ⭐ Excelente para transformación corporal
+    """
+        )
+
+        return
+
+   # =====================================
+# MULTIVITAMINICO
+# =====================================
+
+    elif texto == "💊 Multivitamínico":
+
+        await update.message.reply_text(
+            """
+    💊 MULTIVITAMÍNICO HERBALIFE
+
+    Nutrición completa para tu cuerpo 🌿
+
+    ✅ BENEFICIOS:
+    • Vitaminas esenciales
+    • Más energía
+    • Sistema inmune
+    • Bienestar general
+    • Apoya metabolismo
+
+    🛡️ AYUDA A:
+    • Reducir fatiga
+    • Mejorar nutrición
+    • Complementar alimentación
+    • Mantener salud diaria
+
+    ⏰ CÓMO TOMARLO:
+    1 tableta diaria
+
+    🥗 RECOMENDADO PARA:
+    • Hombres
+    • Mujeres
+    • Personas activas
+    • Nutrición diaria
+
+    🔥 TIP COACH ALEXANDRA:
+    Úsalo diariamente junto a tu programa Herbalife.
+
+    ⭐ Base nutricional inteligente
+    """
+        )
+
+        return
+
     user_id = str(update.message.from_user.id)
 
     # =========================================
@@ -385,6 +703,7 @@ async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(respuesta_rapida)
         return
 
+
     # =========================================
     # MENÚ
     # =========================================
@@ -393,14 +712,15 @@ async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(
             """
-🥤 MENÚ BRIGHT PLACE SPOT
+    🥤 MENÚ
 
-• Batido Energético
-• Batido Proteico
-• Aloe Herbal
-• Té Energizante
-"""
+    • Formula 1
+    • Herbal Tea
+    • Proteína
+    • Multivitamínico
+    """
         )
+
         return
 
     # =========================================
@@ -557,9 +877,15 @@ https://www.instagram.com/brightplacespot/
 
         return
 
-    # =========================================
+    
+    
+   
+
+
+# =========================================
     # MI CUENTA
     # =========================================
+
 
     elif texto == "👤 Mi cuenta":
 
@@ -583,11 +909,12 @@ Meta: {usuario.get("meta", "")}
 
         return
 
+
     # =========================================
     # IA
     # =========================================
 
-    respuesta_ia = await responder_ia(user_id, texto)
+    respuesta_ia = await responder_ia(update, user_id, texto)
 
     await update.message.reply_text(respuesta_ia)
 
@@ -639,11 +966,57 @@ conv_handler = ConversationHandler(
     fallbacks=[CommandHandler("cancel", cancelar)]
 )
 
+
+order_handler = ConversationHandler(
+
+    entry_points=[
+
+        MessageHandler(
+            filters.Regex("^🛒 Hacer pedido$"),
+            start_order
+        ),
+
+        CommandHandler(
+            "pedido",
+            start_order
+        ),
+    ],
+
+    states={
+
+        PRODUCT: [
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND,
+                get_product
+            )
+        ],
+
+        QUANTITY: [
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND,
+                get_quantity
+            )
+        ],
+
+        NOTE: [
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND,
+                finish_order
+            )
+        ],
+    },
+
+    fallbacks=[
+        CommandHandler("cancel", cancelar)
+    ]
+)
 # =====================================
 # HANDLERS
 # =====================================
 
 app.add_handler(conv_handler)
+
+app.add_handler(order_handler)
 
 app.add_handler(
     MessageHandler(
@@ -652,26 +1025,99 @@ app.add_handler(
     )
 )
 
-# =====================================
+app.add_handler(CommandHandler("clientes", clientes_command))
+app.add_handler(CommandHandler("stats", stats_command))
+app.add_handler(CommandHandler("cliente", cliente_command))
+
+app.add_handler(
+    CommandHandler(
+        "broadcast_inactivos",
+        broadcast_inactivos
+    )
+)
+
+app.add_handler(
+    CommandHandler(
+        "broadcast_objetivo",
+        broadcast_objetivo
+    )
+)
+
+app.add_handler(
+    CommandHandler(
+        "crear_campana_inactivos",
+        crear_campana_inactivos
+    )
+)
+
+app.add_handler(
+    CommandHandler("broadcast", broadcast)
+)
+
+
+app.add_handler(
+    CommandHandler(
+        "reactivar_inactivos",
+        reactivar_inactivos
+    )
+)
+
+app.add_handler(
+    CommandHandler(
+        "campanas",
+        ver_campanas
+    )
+)
+
+app.add_handler(
+    CommandHandler(
+        "top_clientes",
+        top_clientes
+    )
+)
+
+app.add_handler(
+    CommandHandler(
+        "dar_puntos",
+        dar_puntos
+    )
+)
+
+app.add_handler(
+    CommandHandler(
+        "recordatorio",
+        configurar_recordatorios
+    )
+)
+# =========================================
 # RECORDATORIOS
-# =====================================
+# =========================================
 
 job_queue = app.job_queue
 
+# MAÑANA ☀️
 job_queue.run_daily(
     recordatorio,
-    time=time(hour=8, minute=0)
+    time=time(hour=7, minute=0)
+)
+
+# NOCHE 🌙
+job_queue.run_daily(
+    recordatorio,
+    time=time(hour=19, minute=0)
 )
 
 job_queue.run_daily(
     revisar_inactivos,
-    time=time(hour=12, minute=0)
+    time=time(hour=12, minute=0),
 )
 
-print("🚀 BOT ENCENDIDO...")
+print("🤖 BOT ENCENDIDO")
+
+app.run_polling(drop_pending_updates=True)
+
+
 
 # =====================================
 # RUN
 # =====================================
-
-app.run_polling()

@@ -14,9 +14,15 @@ def load_users():
 
 
 def save_users(users):
+    
 
     with open(FILE, "w", encoding="utf-8") as f:
         json.dump(users, f, indent=4, ensure_ascii=False)
+
+
+def get_all_users():
+    users = load_users()
+    return users
 
 
 def get_user_profile(users, user_id):

@@ -3,7 +3,7 @@ ADMIN_ID = 0
 
 PRODUCT, QUANTITY, NOTE = range(3)
 
-PRESIDENT_CHAT_ID = 123456789
+PRESIDENT_CHAT_ID = 0
 
 
 async def start_order(update, context):

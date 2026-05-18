@@ -6,12 +6,8 @@ from user_service import (
     save_users
 )
 
-<<<<<<< HEAD
-ADMIN_ID = "7816979989"
-=======
-ADMIN_ID = 0
->>>>>>> 10fde51dda9db15dc5b5914f0b8e757c10d8951c
 
+ADMIN_ID = 0
 
 async def dar_puntos(
     update: Update,

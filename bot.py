@@ -14,7 +14,7 @@ from admin.broadcast import broadcast
 from admin.inactivos import broadcast_inactivos
 from admin.objetivos import broadcast_objetivo
 from admin.campanas_ai import crear_campana_inactivos
-from admin.reactivacion_ai import reactivar_inactivos
+# from admin.reactivacion_ai import reactivar_inactivos
 from admin.top_clientes import top_clientes
 from services.campanas import ver_campanas
 from admin.puntos import dar_puntos
@@ -1055,12 +1055,7 @@ app.add_handler(
 )
 
 
-app.add_handler(
-    CommandHandler(
-        "reactivar_inactivos",
-        reactivar_inactivos
-    )
-)
+# CommandHandler("reactivar", reactivar_inactivos)
 
 app.add_handler(
     CommandHandler(

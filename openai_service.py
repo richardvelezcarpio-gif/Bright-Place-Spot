@@ -1,9 +1,10 @@
-from openai import OpenAI
+import openai
 import os
 
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY")
-)
+# client = OpenAI(api_key=...)
+
+def generar_respuesta(mensaje):
+    return "🤖 IA temporalmente en mantenimiento."
 
 
 def generar_respuesta(

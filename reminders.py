@@ -1,7 +1,10 @@
 from datetime import time
+from user_service import load_users
 
 
 async def recordatorio_diario(context):
+
+    print("🔥 RECORDATORIO EJECUTÁNDOSE")
 
     usuarios = context.bot_data["usuarios"]
 
@@ -63,13 +66,26 @@ Te esperamos en FitClub 🚀
             print(f"Error enviando a {user_id}: {e}")
 
 
-def configurar_recordatorios(application, usuarios):
+async def configurar_recordatorios(update, context):
 
-    application.bot_data["usuarios"] = usuarios
+    usuarios = load_users()
 
-    job_queue = application.job_queue
+    context.bot_data["usuarios"] = usuarios
 
+    job_queue = context.job_queue
+
+    # 7 AM
     job_queue.run_daily(
         recordatorio_diario,
-        time=time(hour=8, minute=0)
+        time=time(hour=7, minute=0)
+    )
+
+    # 7 PM
+    job_queue.run_daily(
+        recordatorio_diario,
+        time=time(hour=19, minute=0)
+    )
+
+    await update.message.reply_text(
+        "✅ Recordatorios activados 7AM y 7PM"
     )

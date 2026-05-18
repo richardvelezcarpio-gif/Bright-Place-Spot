@@ -1,0 +1,36 @@
+{
+    "7816979989": {
+        "nombre": "Richard",
+        "meta": "",
+        "historial": [
+            {
+                "role": "user",
+                "content": "\u23f0 Recordatorios"
+            },
+            {
+                "role": "user",
+                "content": "\ud83e\udd1d Negocio Herbalife"
+            },
+            {
+                "role": "user",
+                "content": "\ud83d\udcc8 Mi progreso"
+            },
+            {
+                "role": "user",
+                "content": "\u23f0 Recordatorios"
+            },
+            {
+                "role": "user",
+                "content": "\ud83e\udd1d Negocio Herbalife"
+            },
+            {
+                "role": "user",
+                "content": "\ud83d\udcc8 Mi progreso"
+            }
+        ],
+        "visitas": 63,
+        "ultima_actividad": "2026-05-18 09:34:40.279972",
+        "productos": [],
+        "puntos": 0
+    }
+}

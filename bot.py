@@ -491,6 +491,7 @@ async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ["⏰ Recordatorios", "🕒 Horarios"],
             ["🤝 Negocio Herbalife", "🛒 Hacer pedido"],
             ["👤 Mi cuenta"], ["👤 Direccion Club"],
+            ["📞 Contacto Coach"],
         ]
 
         reply_markup = ReplyKeyboardMarkup(

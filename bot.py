@@ -879,14 +879,10 @@ https://www.instagram.com/brightplacespot/
         return
 
     
-    
-   
-
 
 # =========================================
-    # MI CUENTA
-    # =========================================
-
+# MI CUENTA
+# =========================================
 
     elif texto == "👤 Mi cuenta":
 
@@ -895,21 +891,24 @@ https://www.instagram.com/brightplacespot/
             usuario = usuarios[user_id]
 
             await update.message.reply_text(
-                f"""
-👤 MI CUENTA
+    f"""
+    👤 MI PERFIL CRM
 
-Nombre: {usuario.get("nombre", "")}
+    🧑 Nombre:
+    {usuario.get("nombre", "")}
 
-Meta: {usuario.get("meta", "")}
+    🎯 Objetivo:
+    {usuario.get("meta", "")}
 
-⭐ Puntos: {usuario.get("puntos", 0)}
+    🏆 Puntos:
+    {usuario.get("puntos", 0)}
 
-✅ Visitas: {usuario.get("visitas", 0)}
-"""
+    📈 Visitas:
+    {usuario.get("visitas", 0)}
+    """
             )
 
         return
-
 
     # =========================================
     # IA

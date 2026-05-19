@@ -785,32 +785,29 @@ https://www.instagram.com/brightplacespot/
 
     
 
-        # =========================================
-    # REGISTRAR VISITA
-    # =========================================
+   # =========================================
+# REGISTRAR VISITA
+# =========================================
 
-    elif "Registrar visita" in texto:
+    if "Registrar visita" in texto:
 
         if user_id in usuarios:
 
             hoy = datetime.now().strftime("%Y-%m-%d")
 
-            ultima_visita = usuarios[user_id].get("ultima_visita", "")
+            ultima_visita = usuarios[user_id].get(
+                "ultima_visita",
+                ""
+            )
 
-            # EVITAR DOBLE VISITA EL MISMO DÍA
             if ultima_visita == hoy:
 
                 await update.message.reply_text(
-                    """
-⚠️ Ya registraste tu visita hoy.
-
-💚 Te esperamos mañana nuevamente.
-"""
+                    "⚠️ Ya registraste tu visita hoy."
                 )
 
                 return
 
-            # REGISTRAR VISITA
             usuarios[user_id]["visitas"] += 1
             usuarios[user_id]["puntos"] += 10
             usuarios[user_id]["ultima_visita"] = hoy
@@ -823,39 +820,36 @@ https://www.instagram.com/brightplacespot/
             premio = ""
 
             if puntos >= 500:
-
                 premio = "👑 Nivel VIP desbloqueado"
 
             elif puntos >= 200:
-
-                premio = "🎁 Kit FitClub desbloqueado"
+                premio = "🚀 Kit FitClub desbloqueado"
 
             elif puntos >= 100:
-
                 premio = "🥤 Batido gratis desbloqueado"
 
             elif puntos >= 50:
-
                 premio = "🍵 Té gratis desbloqueado"
 
             await update.message.reply_text(
-                f"""
-✅ VISITA REGISTRADA
+    f"""
+    ✅ VISITA REGISTRADA
 
-🏆 Ganaste 10 puntos
+    🏆 Ganaste 10 puntos
 
-⭐ Puntos actuales: {puntos}
-📍 Visitas totales: {visitas}
+    📈 Puntos actuales:
+    {puntos}
 
-🎁 Recompensa actual:
+    👣 Visitas:
+    {visitas}
 
-{premio}
-
-💚 Gracias por cuidar tu salud.
-"""
+    🎁 Recompensa actual:
+    {premio}
+    """
             )
 
-        return
+            return
+
 
     # =========================================
     # MIS PUNTOS
@@ -868,21 +862,21 @@ https://www.instagram.com/brightplacespot/
             puntos = usuarios[user_id]["puntos"]
 
             await update.message.reply_text(
-                f"""
-🏆 MIS PUNTOS
+        f"""
+    🏆 MIS PUNTOS
 
-⭐ Tienes actualmente:
-{puntos} puntos
-"""
+    ✨ Tienes actualmente:
+
+    {puntos} puntos
+    """
             )
 
         return
 
-    
 
-# =========================================
-# MI CUENTA
-# =========================================
+    # =========================================
+    # MI CUENTA
+    # =========================================
 
     elif "Mi cuenta" in texto:
 
@@ -891,32 +885,33 @@ https://www.instagram.com/brightplacespot/
             usuario = usuarios[user_id]
 
             await update.message.reply_text(
-    f"""
-    👤 MI PERFIL CRM
+        f"""
+        👤 MI PERFIL
 
-    🧑 Nombre:
-    {usuario.get("nombre", "")}
+        🧑 Nombre:
+        {usuario.get("nombre", "")}
 
-    🎯 Objetivo:
-    {usuario.get("meta", "")}
+        🎯 Objetivo:
+        {usuario.get("meta", "")}
 
-    🏆 Puntos:
-    {usuario.get("puntos", 0)}
+        🏆 Puntos:
+        {usuario.get("puntos", 0)}
 
-    📈 Visitas:
-    {usuario.get("visitas", 0)}
-    """
+        📈 Visitas:
+        {usuario.get("visitas", 0)}
+        """
             )
 
-        return
+            return
+
 
     # =========================================
     # IA
     # =========================================
 
-    respuesta_ia = await responder_ia(update, user_id, texto)
+        respuesta_ia = await responder_ia(update, user_id, texto)
 
-    await update.message.reply_text(respuesta_ia)
+        await update.message.reply_text(respuesta_ia)
 
 # =====================================
 # CANCELAR

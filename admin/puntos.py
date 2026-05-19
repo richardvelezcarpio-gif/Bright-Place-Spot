@@ -7,7 +7,7 @@ from user_service import (
 )
 
 
-ADMIN_ID = 0
+ADMIN_ID = 559133702
 
 async def dar_puntos(
     update: Update,

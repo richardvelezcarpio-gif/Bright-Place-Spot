@@ -5,7 +5,7 @@ import openai
 import os
 
 
-ADMIN_ID = 0
+ADMIN_ID = 559133702
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 

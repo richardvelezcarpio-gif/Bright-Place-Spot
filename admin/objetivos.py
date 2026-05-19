@@ -4,7 +4,7 @@ from telegram.ext import ContextTypes
 from user_service import load_users
 
 
-ADMIN_ID = 0
+ADMIN_ID = 559133702
 
 
 async def broadcast_objetivo(

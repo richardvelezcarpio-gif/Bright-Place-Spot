@@ -6,7 +6,7 @@ from user_service import load_users
 
 
 
-ADMIN_ID = 0
+ADMIN_ID = 559133702
 
 
 
@@ -15,7 +15,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
 
     # VALIDAR ADMIN
-    if user_id != ADMIN_ID:
+    if user_id != str(ADMIN_ID):
         await update.message.reply_text(
             "❌ No autorizado"
         )

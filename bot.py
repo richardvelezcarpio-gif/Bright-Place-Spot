@@ -414,7 +414,7 @@ async def guardar_meta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ["✅ Registrar visita", "🏆 Mis puntos"],
     ["⏰ Recordatorios", "🕒 Horarios"],
     ["🤝 Negocio Herbalife", "👤 Mi cuenta"],
-    ["📍 Dirección Club", "🛒 Hacer pedido"],
+    ["📍 Direccion Club", "🛒 Hacer pedido"],
     ["📞 Contacto Coach"],
     ] 
 
@@ -746,7 +746,7 @@ Lunes a Viernes
     # DIRECCIÓN CLUB
     # =========================================
 
-    elif texto == "📍 Dirección Club":
+    elif "Direccion Club" in texto:
 
         await update.message.reply_text(
             """
@@ -884,7 +884,7 @@ https://www.instagram.com/brightplacespot/
 # MI CUENTA
 # =========================================
 
-    elif texto == "👤 Mi cuenta":
+    elif "Mi cuenta" in texto:
 
         if user_id in usuarios:
 

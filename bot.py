@@ -789,7 +789,7 @@ https://www.instagram.com/brightplacespot/
     # REGISTRAR VISITA
     # =========================================
 
-    elif texto == "✅ Registrar visita":
+    elif "Registrar visita" in texto:
 
         if user_id in usuarios:
 
@@ -861,7 +861,7 @@ https://www.instagram.com/brightplacespot/
     # MIS PUNTOS
     # =========================================
 
-    elif texto == "🏆 Mis puntos":
+    elif "Mis puntos" in texto:
 
         if user_id in usuarios:
 
